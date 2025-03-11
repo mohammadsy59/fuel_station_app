@@ -1,7 +1,5 @@
 // ignore_for_file: deprecated_member_use
 
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fuel_station_app/models/tank.dart';
 import 'package:fuel_station_app/models/pump.dart';
@@ -9,9 +7,6 @@ import 'package:fuel_station_app/models/cashbox.dart';
 import 'package:fuel_station_app/database_helper.dart';
 import 'package:fuel_station_app/screens/change_password_screen.dart';
 import 'package:fuel_station_app/screens/lock_screen.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:file_picker/file_picker.dart';
 
 class DashboardScreen extends StatefulWidget {
   @override
