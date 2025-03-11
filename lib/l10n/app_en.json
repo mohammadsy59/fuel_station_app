@@ -1,0 +1,11 @@
+{
+    "appTitle": "Fuel Station App",
+    "invoices": "Invoices",
+    "debts": "Debts",
+    "cashbox": "Cashbox",
+    "markPaid": "Mark Paid",
+    "confirmPayment": "Confirm Payment",
+    "paymentConfirmed": "Payment confirmed.",
+    "debtPaymentNote": "Debt payment for customer {customerName}",
+    "insufficientFuel": "Insufficient fuel in the selected tank"
+  }

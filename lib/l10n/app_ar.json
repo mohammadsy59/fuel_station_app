@@ -1,0 +1,11 @@
+{
+    "appTitle": "تطبيق محطة الوقود",
+    "invoices": "الفواتير",
+    "debts": "الديون",
+    "cashbox": "صندوق النقد",
+    "markPaid": "تحديد كمدفوع",
+    "confirmPayment": "تأكيد الدفع",
+    "paymentConfirmed": "تم تأكيد الدفع.",
+    "debtPaymentNote": "دفع الدين للعميل {customerName}",
+    "insufficientFuel": "لا يوجد وقود كافٍ في الخزان المحدد"
+  }
