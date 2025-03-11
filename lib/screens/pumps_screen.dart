@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fuel_station_app/models/cashbox.dart';
 import 'package:fuel_station_app/models/pump.dart';
-import 'package:fuel_station_app/database_helper.dart';
 import 'package:fuel_station_app/models/tank.dart';
+import 'package:fuel_station_app/database_helper.dart';
 
 class PumpsScreen extends StatefulWidget {
   @override
@@ -38,13 +38,8 @@ class _PumpsScreenState extends State<PumpsScreen> {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder:
-          (context) => PumpFormDialog(
-            pump: pump,
-            tanks: _tanks,
-            pumps: _pumps, // Pass the list of pumps
-          ),
+          (context) => PumpFormDialog(pump: pump, tanks: _tanks, pumps: _pumps),
     );
-
     if (result != null) {
       if (pump == null) {
         await _dbHelper.insert('pumps', result);
@@ -56,35 +51,38 @@ class _PumpsScreenState extends State<PumpsScreen> {
   }
 
   Future<void> _deletePump(String id) async {
-    await _dbHelper.database.then(
-      (db) => db.delete('pumps', where: 'id = ?', whereArgs: [id]),
-    );
-    _loadData(); // Refresh the list
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Fuel Pumps'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: () => _addOrUpdatePump(),
-          ),
-        ],
-      ),
-      body:
-          _pumps.isEmpty
-              ? Center(child: Text('No pumps available.'))
-              : ListView.builder(
-                itemCount: _pumps.length,
-                itemBuilder: (context, index) {
-                  final pump = _pumps[index];
-                  return _buildPumpCard(pump);
-                },
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Confirm Delete'),
+            content: Text('Are you sure you want to delete this pump?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('Cancel'),
               ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('Delete'),
+              ),
+            ],
+          ),
     );
+    if (shouldDelete != true) return;
+    try {
+      await _dbHelper.database.then(
+        (db) => db.delete('pumps', where: 'id = ?', whereArgs: [id]),
+      );
+      _loadData(); // Refresh the list
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Pump deleted successfully')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to delete pump: $e')));
+    }
   }
 
   Future<void> _sellFuel(Pump pump) async {
@@ -96,14 +94,39 @@ class _PumpsScreenState extends State<PumpsScreen> {
     if (result != null) {
       try {
         // Extract input values
-        final digitalCounter = result['digitalCounter'];
-        final mechanicalCounter = result['mechanicalCounter'];
-        final pricePerLiter = result['pricePerLiter'];
+        final currentDigitalCounter = double.parse(result['digitalCounter']);
+        final currentMechanicalCounter = double.parse(
+          result['mechanicalCounter'],
+        );
+        final pricePerLiter = double.parse(result['pricePerLiter']);
         final employeeName = result['employeeName'];
         final currency = result['currency'];
 
-        // Calculate fuel sold
-        final fuelSold = digitalCounter - pump.digitalCounter;
+        // Fetch the pump's previous readings
+        final pumpMap = await _dbHelper.query(
+          'pumps',
+          where: 'id = ?',
+          whereArgs: [pump.id],
+        );
+        if (pumpMap.isEmpty) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Pump not found!')));
+          return;
+        }
+
+        final previousDigitalCounter =
+            pumpMap.first['digitalCounter'] as double;
+        final previousMechanicalCounter =
+            pumpMap.first['mechanicalCounter'] as double;
+
+        // Calculate the total fuel sold
+        final fuelSold = _calculateSoldFuel(
+          previousDigitalCounter,
+          currentDigitalCounter,
+          previousMechanicalCounter,
+          currentMechanicalCounter,
+        );
 
         // Fetch the connected tank
         final tankMap = await _dbHelper.query(
@@ -117,6 +140,7 @@ class _PumpsScreenState extends State<PumpsScreen> {
           ).showSnackBar(SnackBar(content: Text('Connected tank not found!')));
           return;
         }
+
         final tank = Tank.fromMap(tankMap.first);
 
         // Check if there's enough fuel in the tank
@@ -156,26 +180,26 @@ class _PumpsScreenState extends State<PumpsScreen> {
 
         // Update pump counters
         final updatedPump = pump.copyWith(
-          digitalCounter: digitalCounter,
-          mechanicalCounter: mechanicalCounter,
+          digitalCounter: currentDigitalCounter,
+          mechanicalCounter: currentMechanicalCounter,
         );
         await _dbHelper.update('pumps', updatedPump.toMap());
 
         // Create an invoice
         final invoice = {
-          'pumpId': pump.id,
-          'fuelSold': fuelSold,
-          'pricePerLiter': pricePerLiter,
-          'totalRevenue': revenue,
+          'customerName': employeeName,
+          'fuelType': tank.fuelType,
+          'quantity': fuelSold,
+          'pricePerUnit': pricePerLiter,
+          'totalAmount': revenue,
           'currency': currency,
-          'employeeName': employeeName,
-          'timestamp': DateTime.now().toIso8601String(),
+          'date': DateTime.now().toIso8601String(),
+          'paymentStatus': 'Paid',
         };
         await _dbHelper.insert('invoices', invoice);
 
         // Refresh data
         _loadData();
-
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Fuel sold successfully!')));
@@ -183,9 +207,60 @@ class _PumpsScreenState extends State<PumpsScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Failed to sell fuel: $e')));
-        print(e);
       }
     }
+  }
+
+  double _calculateSoldFuel(
+    double previousDigitalCounter,
+    double currentDigitalCounter,
+    double previousMechanicalCounter,
+    double currentMechanicalCounter,
+  ) {
+    const maxDigitalValue = 9999; // Maximum value of the digital counter
+
+    // Calculate the number of full cycles the digital counter has completed
+    final mechanicalCycles =
+        currentMechanicalCounter - previousMechanicalCounter;
+
+    // Calculate the difference in the digital counter
+    double digitalDifference;
+    if (currentDigitalCounter < previousDigitalCounter) {
+      // Digital counter has reset
+      digitalDifference =
+          (maxDigitalValue - previousDigitalCounter) + currentDigitalCounter;
+    } else {
+      // No reset occurred
+      digitalDifference = currentDigitalCounter - previousDigitalCounter;
+    }
+
+    // Total fuel sold = (mechanical cycles * maxDigitalValue) + digitalDifference
+    return (mechanicalCycles * maxDigitalValue) + digitalDifference;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Fuel Pumps'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add),
+            onPressed: () => _addOrUpdatePump(),
+          ),
+        ],
+      ),
+      body:
+          _pumps.isEmpty
+              ? Center(child: Text('No pumps available.'))
+              : ListView.builder(
+                itemCount: _pumps.length,
+                itemBuilder: (context, index) {
+                  final pump = _pumps[index];
+                  return _buildPumpCard(pump);
+                },
+              ),
+    );
   }
 
   Widget _buildPumpCard(Pump pump) {
@@ -215,13 +290,17 @@ class _PumpsScreenState extends State<PumpsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () => _sellFuel(pump),
+                IconButton(
+                  icon: Icon(Icons.edit),
+                  onPressed: () => _addOrUpdatePump(pump: pump),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete),
+                  onPressed: () => _deletePump(pump.id),
+                ),
+                IconButton(
                   icon: Icon(Icons.sell),
-                  label: Text('Sell Fuel'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[700],
-                  ),
+                  onPressed: () => _sellFuel(pump),
                 ),
               ],
             ),
@@ -232,38 +311,31 @@ class _PumpsScreenState extends State<PumpsScreen> {
   }
 }
 
+// Define PumpFormDialog
 class PumpFormDialog extends StatefulWidget {
   final Pump? pump;
   final List<Map<String, dynamic>> tanks;
-  final List<Pump> pumps; // Add a list of existing pumps
+  final List<Pump> pumps;
 
-  PumpFormDialog({
-    this.pump,
-    required this.tanks,
-    required this.pumps, // Pass the list of pumps
-  });
+  PumpFormDialog({this.pump, required this.tanks, required this.pumps});
 
   @override
   _PumpFormDialogState createState() => _PumpFormDialogState();
 }
 
 class _PumpFormDialogState extends State<PumpFormDialog> {
-  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _idController;
   late TextEditingController _digitalCounterController;
   late TextEditingController _mechanicalCounterController;
   late String _selectedTankId;
-
-  bool _isEditMode = false; // Track if we're editing an existing pump
+  bool _isEditMode = false;
 
   @override
   void initState() {
     super.initState();
-
     _isEditMode = widget.pump != null;
 
-    // Initialize controllers
     _idController = TextEditingController(text: widget.pump?.id ?? '');
     _digitalCounterController = TextEditingController(
       text: widget.pump?.digitalCounter.toString() ?? '',
@@ -271,33 +343,7 @@ class _PumpFormDialogState extends State<PumpFormDialog> {
     _mechanicalCounterController = TextEditingController(
       text: widget.pump?.mechanicalCounter.toString() ?? '',
     );
-
-    // Pre-fill tank dropdown
     _selectedTankId = widget.pump?.connectedTankId ?? widget.tanks.first['id'];
-
-    // Auto-generate ID for new pumps
-    if (!_isEditMode) {
-      _generateUniqueId();
-    }
-  }
-
-  Future<void> _generateUniqueId() async {
-    // Query the database for the highest existing ID
-    final existingPumps = await _dbHelper.queryAll('pumps');
-    int maxId = 0;
-
-    for (var pump in existingPumps) {
-      final id = pump['id'] as String;
-      final numericPart =
-          int.tryParse(id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-      if (numericPart > maxId) {
-        maxId = numericPart;
-      }
-    }
-
-    // Generate the next ID
-    final nextId = 'P${maxId + 1}';
-    _idController.text = nextId;
   }
 
   @override
@@ -320,16 +366,8 @@ class _PumpFormDialogState extends State<PumpFormDialog> {
             TextFormField(
               controller: _idController,
               decoration: InputDecoration(labelText: 'Pump ID'),
-              enabled: !_isEditMode, // Disable ID field in edit mode
-              validator: (value) {
-                if (_isEditMode && value!.isEmpty) {
-                  return 'ID is required';
-                }
-                if (!RegExp(r'^P\d+$').hasMatch(value!)) {
-                  return 'ID must start with "P" followed by a number (e.g., P1, P2)';
-                }
-                return null;
-              },
+              validator:
+                  (value) => value!.isEmpty ? 'Pump ID is required' : null,
             ),
             DropdownButtonFormField<String>(
               value: _selectedTankId,
@@ -338,7 +376,7 @@ class _PumpFormDialogState extends State<PumpFormDialog> {
                   widget.tanks.map((tank) {
                     return DropdownMenuItem<String>(
                       value: tank['id'],
-                      child: Text('${tank['fuelType']} Tank (${tank['id']})'),
+                      child: Text('Tank ${tank['id']} (${tank['fuelType']})'),
                     );
                   }).toList(),
               onChanged: (value) {
@@ -346,7 +384,9 @@ class _PumpFormDialogState extends State<PumpFormDialog> {
                   _selectedTankId = value!;
                 });
               },
-              validator: (value) => value == null ? 'Tank is required' : null,
+              validator:
+                  (value) =>
+                      value == null ? 'Connected tank is required' : null,
             ),
             TextFormField(
               controller: _digitalCounterController,
@@ -386,7 +426,7 @@ class _PumpFormDialogState extends State<PumpFormDialog> {
 
               // Check for duplicate ID when adding a new pump
               if (!_isEditMode) {
-                final existingPump = await _dbHelper.query(
+                final existingPump = await DatabaseHelper.instance.query(
                   'pumps',
                   where: 'id = ?',
                   whereArgs: [pumpData['id']],
@@ -409,6 +449,7 @@ class _PumpFormDialogState extends State<PumpFormDialog> {
   }
 }
 
+// Define SellFuelDialog
 class SellFuelDialog extends StatefulWidget {
   final Pump pump;
 
@@ -419,46 +460,17 @@ class SellFuelDialog extends StatefulWidget {
 }
 
 class _SellFuelDialogState extends State<SellFuelDialog> {
-  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _digitalCounterController;
   late TextEditingController _mechanicalCounterController;
   late TextEditingController _pricePerLiterController;
   late TextEditingController _employeeNameController;
-  String _selectedCurrency = 'USD'; // Default currency
-  String _paymentStatus = 'Paid'; // Default payment status
-  double _calculateSoldFuel(
-    double previousDigitalCounter,
-    double currentDigitalCounter,
-    double previousMechanicalCounter,
-    double currentMechanicalCounter,
-  ) {
-    const maxDigitalValue = 9999; // Maximum value of the digital counter
-
-    // Calculate the number of full cycles the digital counter has completed
-    final mechanicalCycles =
-        currentMechanicalCounter - previousMechanicalCounter;
-
-    // Calculate the difference in the digital counter
-    double digitalDifference;
-    if (currentDigitalCounter < previousDigitalCounter) {
-      // Digital counter has reset
-      digitalDifference =
-          (maxDigitalValue - previousDigitalCounter) + currentDigitalCounter;
-    } else {
-      // No reset occurred
-      digitalDifference = currentDigitalCounter - previousDigitalCounter;
-    }
-
-    // Total fuel sold = (mechanical cycles * maxDigitalValue) + digitalDifference
-    return (mechanicalCycles * maxDigitalValue) + digitalDifference;
-  }
+  late String _selectedCurrency;
 
   @override
   void initState() {
     super.initState();
 
-    // Initialize controllers with pump's current values
     _digitalCounterController = TextEditingController(
       text: widget.pump.digitalCounter.toString(),
     );
@@ -467,6 +479,7 @@ class _SellFuelDialogState extends State<SellFuelDialog> {
     );
     _pricePerLiterController = TextEditingController();
     _employeeNameController = TextEditingController();
+    _selectedCurrency = 'USD'; // Default currency
   }
 
   @override
@@ -481,7 +494,7 @@ class _SellFuelDialogState extends State<SellFuelDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Sell Fuel from Pump ${widget.pump.id}'),
+      title: Text('Sell Fuel'),
       content: Form(
         key: _formKey,
         child: Column(
@@ -505,7 +518,7 @@ class _SellFuelDialogState extends State<SellFuelDialog> {
             ),
             TextFormField(
               controller: _pricePerLiterController,
-              decoration: InputDecoration(labelText: 'Price per Liter'),
+              decoration: InputDecoration(labelText: 'Price Per Liter'),
               keyboardType: TextInputType.number,
               validator:
                   (value) =>
@@ -536,25 +549,6 @@ class _SellFuelDialogState extends State<SellFuelDialog> {
               validator:
                   (value) => value == null ? 'Currency is required' : null,
             ),
-            DropdownButtonFormField<String>(
-              value: _paymentStatus,
-              decoration: InputDecoration(labelText: 'Payment Status'),
-              items:
-                  ['Paid', 'Unpaid'].map((status) {
-                    return DropdownMenuItem<String>(
-                      value: status,
-                      child: Text(status),
-                    );
-                  }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _paymentStatus = value!;
-                });
-              },
-              validator:
-                  (value) =>
-                      value == null ? 'Payment status is required' : null,
-            ),
           ],
         ),
       ),
@@ -564,129 +558,19 @@ class _SellFuelDialogState extends State<SellFuelDialog> {
           child: Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: () async {
+          onPressed: () {
             if (_formKey.currentState!.validate()) {
-              try {
-                // Extract input values
-                final currentDigitalCounter = double.parse(
-                  _digitalCounterController.text,
-                );
-                final currentMechanicalCounter = double.parse(
-                  _mechanicalCounterController.text,
-                );
-                final pricePerLiter = double.parse(
-                  _pricePerLiterController.text,
-                );
-                final employeeName = _employeeNameController.text;
-                final currency = _selectedCurrency;
-
-                // Fetch the pump's previous readings
-                final pumpMap = await _dbHelper.query(
-                  'pumps',
-                  where: 'id = ?',
-                  whereArgs: [widget.pump.id],
-                );
-                if (pumpMap.isEmpty) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Pump not found!')));
-                  return;
-                }
-                final previousDigitalCounter =
-                    pumpMap.first['digitalCounter'] as double;
-                final previousMechanicalCounter =
-                    pumpMap.first['mechanicalCounter'] as double;
-
-                // Calculate the total fuel sold
-                final fuelSold = _calculateSoldFuel(
-                  previousDigitalCounter,
-                  currentDigitalCounter,
-                  previousMechanicalCounter,
-                  currentMechanicalCounter,
-                );
-
-                // Fetch the connected tank
-                final tankMap = await _dbHelper.query(
-                  'tanks',
-                  where: 'id = ?',
-                  whereArgs: [widget.pump.connectedTankId],
-                );
-                if (tankMap.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Connected tank not found!')),
-                  );
-                  return;
-                }
-                final tank = Tank.fromMap(tankMap.first);
-
-                // Check if there's enough fuel in the tank
-                if (tank.currentLevel < fuelSold) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Not enough fuel in the tank!')),
-                  );
-                  return;
-                }
-
-                // Update tank's current level
-                final updatedTank = tank.copyWith(
-                  currentLevel: tank.currentLevel - fuelSold,
-                );
-                await _dbHelper.update('tanks', updatedTank.toMap());
-
-                // Update cashbox
-                final cashboxMaps = await _dbHelper.queryAll('cashbox');
-                Cashbox cashbox;
-                if (cashboxMaps.isNotEmpty) {
-                  cashbox = Cashbox.fromMap(cashboxMaps.first);
-                } else {
-                  cashbox = Cashbox(usd: 0, syp: 0, tryCurrency: 0);
-                }
-
-                final revenue = fuelSold * pricePerLiter;
-                if (currency == 'USD') {
-                  cashbox = cashbox.copyWith(usd: cashbox.usd + revenue);
-                } else if (currency == 'SYP') {
-                  cashbox = cashbox.copyWith(syp: cashbox.syp + revenue);
-                } else if (currency == 'TRY') {
-                  cashbox = cashbox.copyWith(
-                    tryCurrency: cashbox.tryCurrency + revenue,
-                  );
-                }
-                await _dbHelper.insertOrUpdateCashbox(cashbox);
-
-                // Update pump counters
-                final updatedPump = widget.pump.copyWith(
-                  digitalCounter: currentDigitalCounter,
-                  mechanicalCounter: currentMechanicalCounter,
-                );
-                await _dbHelper.update('pumps', updatedPump.toMap());
-
-                // Create an invoice
-                final invoice = {
-                  'customerName': employeeName,
-                  'fuelType': tank.fuelType,
-                  'quantity': fuelSold,
-                  'pricePerUnit': pricePerLiter,
-                  'totalAmount': revenue,
-                  'currency': currency,
-                  'date': DateTime.now().toIso8601String(),
-                  'paymentStatus': 'Paid',
-                };
-                await _dbHelper.insert('invoices', invoice);
-
-                // Refresh data
-                Navigator.pop(context); // Close the dialog
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Fuel sold successfully!')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to sell fuel: $e')),
-                );
-              }
+              final result = {
+                'digitalCounter': _digitalCounterController.text,
+                'mechanicalCounter': _mechanicalCounterController.text,
+                'pricePerLiter': _pricePerLiterController.text,
+                'employeeName': _employeeNameController.text,
+                'currency': _selectedCurrency,
+              };
+              Navigator.pop(context, result);
             }
           },
-          child: Text('Submit'),
+          child: Text('Sell Fuel'),
         ),
       ],
     );
