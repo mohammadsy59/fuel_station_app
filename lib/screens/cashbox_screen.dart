@@ -69,21 +69,21 @@ class _CashboxScreenState extends State<CashboxScreen> {
       double newTryCurrency = _cashbox!.tryCurrency;
 
       if (transaction.currency == 'USD') {
-        if (transaction.type == 'Deposit') {
+        if (transaction.type == 'ايداع') {
           newUsd += transaction.amount; // Add for deposit
-        } else if (transaction.type == 'Withdrawal') {
+        } else if (transaction.type == 'سحب') {
           newUsd -= transaction.amount; // Subtract for withdrawal
         }
       } else if (transaction.currency == 'SYP') {
-        if (transaction.type == 'Deposit') {
+        if (transaction.type == 'ايداع') {
           newSyp += transaction.amount;
-        } else if (transaction.type == 'Withdrawal') {
+        } else if (transaction.type == 'سحب') {
           newSyp -= transaction.amount;
         }
       } else if (transaction.currency == 'TRY') {
-        if (transaction.type == 'Deposit') {
+        if (transaction.type == 'ايداع') {
           newTryCurrency += transaction.amount;
-        } else if (transaction.type == 'Withdrawal') {
+        } else if (transaction.type == 'سحب') {
           newTryCurrency -= transaction.amount;
         }
       }
@@ -107,39 +107,42 @@ class _CashboxScreenState extends State<CashboxScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Cashbox Management'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: () => _showTransactionDialog(),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Balances'),
-            _buildBalanceCards(),
-            SizedBox(height: 20),
-            _buildSectionTitle('Recent Transactions'),
-            _transactions.isEmpty
-                ? Center(child: Text('No transactions available.'))
-                : ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: _transactions.length,
-                  itemBuilder: (context, index) {
-                    final transaction = _transactions[index];
-                    return _buildTransactionCard(
-                      transaction,
-                    ); // Pass the TransactionModel object
-                  },
-                ),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('إدارة الصندوق'),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.add),
+              onPressed: () => _showTransactionDialog(),
+            ),
           ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionTitle('الميزانية'),
+              _buildBalanceCards(),
+              SizedBox(height: 20),
+              _buildSectionTitle('المعاملات الأخيرة'),
+              _transactions.isEmpty
+                  ? Center(child: Text('لا يوجد معاملات'))
+                  : ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: _transactions.length,
+                    itemBuilder: (context, index) {
+                      final transaction = _transactions[index];
+                      return _buildTransactionCard(
+                        transaction,
+                      ); // Pass the TransactionModel object
+                    },
+                  ),
+            ],
+          ),
         ),
       ),
     );
@@ -185,7 +188,7 @@ class _CashboxScreenState extends State<CashboxScreen> {
       child: InkWell(
         onTap: () => _showUpdateBalanceDialog(currency),
         child: Container(
-          width: 100,
+          width: 300,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             gradient: LinearGradient(
@@ -230,15 +233,15 @@ class _CashboxScreenState extends State<CashboxScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
-            Text('Amount: ${transaction.amount}'),
-            Text('Date: ${DateTime.parse(transaction.date).toString()}'),
+            Text('المبلغ: ${transaction.amount}'),
+            Text('التاريخ: ${DateTime.parse(transaction.date).toString()}'),
             if (transaction.note.isNotEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 8),
                   Text(
-                    'Note: ${transaction.note}',
+                    'ملاحظة : ${transaction.note}',
                     style: TextStyle(fontStyle: FontStyle.italic),
                   ),
                 ],
@@ -255,14 +258,14 @@ class _CashboxScreenState extends State<CashboxScreen> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: Text('Update $currency Balance'),
+            title: Text('تعديل $currency '),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextFormField(
                   controller: _amountController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: 'Amount'),
+                  decoration: InputDecoration(labelText: 'المبلغ'),
                 ),
               ],
             ),
@@ -272,7 +275,7 @@ class _CashboxScreenState extends State<CashboxScreen> {
                   _amountController.dispose(); // Clean up the controller
                   Navigator.pop(context); // Close the dialog
                 },
-                child: Text('Cancel'),
+                child: Text('الفاء'),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -281,7 +284,7 @@ class _CashboxScreenState extends State<CashboxScreen> {
                   _amountController.dispose(); // Clean up the controller
                   Navigator.pop(context); // Close the dialog
                 },
-                child: Text('Save'),
+                child: Text('حفظ'),
               ),
             ],
           ),
@@ -292,19 +295,19 @@ class _CashboxScreenState extends State<CashboxScreen> {
     final TextEditingController _amountController = TextEditingController();
     final TextEditingController _noteController = TextEditingController();
     String? _selectedCurrency = 'USD';
-    String? _selectedType = 'Deposit';
+    String? _selectedType = 'ايداع';
 
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
-            title: Text('Add Transaction'),
+            title: Text('اضافة معاملة'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
                   value: _selectedCurrency,
-                  decoration: InputDecoration(labelText: 'Currency'),
+                  decoration: InputDecoration(labelText: 'العملة'),
                   items:
                       ['USD', 'SYP', 'TRY'].map((currency) {
                         return DropdownMenuItem<String>(
@@ -321,13 +324,13 @@ class _CashboxScreenState extends State<CashboxScreen> {
                 TextFormField(
                   controller: _amountController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: 'Amount'),
+                  decoration: InputDecoration(labelText: 'المبلغ'),
                 ),
                 DropdownButtonFormField<String>(
                   value: _selectedType,
-                  decoration: InputDecoration(labelText: 'Type'),
+                  decoration: InputDecoration(labelText: 'النوع'),
                   items:
-                      ['Deposit', 'Withdrawal'].map((type) {
+                      ['ايداع', 'سحب'].map((type) {
                         return DropdownMenuItem<String>(
                           value: type,
                           child: Text(type),
@@ -341,7 +344,7 @@ class _CashboxScreenState extends State<CashboxScreen> {
                 ),
                 TextFormField(
                   controller: _noteController,
-                  decoration: InputDecoration(labelText: 'Note (Optional)'),
+                  decoration: InputDecoration(labelText: 'ملاحظات (اختياري)'),
                 ),
               ],
             ),
@@ -352,14 +355,14 @@ class _CashboxScreenState extends State<CashboxScreen> {
                   _noteController.dispose();
                   Navigator.pop(context); // Close the dialog
                 },
-                child: Text('Cancel'),
+                child: Text('الغاء'),
               ),
               ElevatedButton(
                 onPressed: () {
                   final amount = double.tryParse(_amountController.text);
                   if (amount == null || amount == 0) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Please enter a valid amount')),
+                      SnackBar(content: Text('الرجاء ادخال قيمة صحيحة')),
                     );
                     return;
                   }
@@ -382,7 +385,7 @@ class _CashboxScreenState extends State<CashboxScreen> {
                   _noteController.dispose();
                   Navigator.pop(context); // Close the dialog
                 },
-                child: Text('Add'),
+                child: Text('اضافة'),
               ),
             ],
           ),

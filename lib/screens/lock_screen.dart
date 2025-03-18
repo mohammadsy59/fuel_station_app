@@ -25,9 +25,9 @@ class _LockScreenState extends State<LockScreen> {
     // Fetch the stored password from the database
     final passwordMaps = await _dbHelper.queryAll('settings');
     if (passwordMaps.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No password set. Please contact the admin.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('لا يوجد كلمة مرور اتصل بالمشرف')));
       return;
     }
 
@@ -40,10 +40,13 @@ class _LockScreenState extends State<LockScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => HomeScreen()),
-      ); // Unlock the app
+      );
+      _passwordController.clear(); // Unlock the app
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Incorrect password. Please try again.')),
+        SnackBar(
+          content: Text('كلمة السر غير صحيحة الرجاء المحاولة مرة ثانية '),
+        ),
       );
     }
   }
@@ -57,7 +60,7 @@ class _LockScreenState extends State<LockScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text('App Locked'),
+          title: Text('التطبيق مقفل '),
           centerTitle: true,
           backgroundColor: Colors.red[900],
         ),
@@ -69,7 +72,7 @@ class _LockScreenState extends State<LockScreen> {
               Icon(Icons.lock, size: 100, color: Colors.red[900]),
               SizedBox(height: 16),
               Text(
-                'Enter Password to Unlock',
+                'أدخل كلمة السر لفتح التطبيق ',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 16),
@@ -77,7 +80,7 @@ class _LockScreenState extends State<LockScreen> {
                 controller: _passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: 'كلمة السر ',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.lock_outline),
                 ),
@@ -86,7 +89,7 @@ class _LockScreenState extends State<LockScreen> {
               ElevatedButton.icon(
                 onPressed: _validatePassword,
                 icon: Icon(Icons.lock_open),
-                label: Text('Unlock'),
+                label: Text('فتح القفل '),
                 style: ElevatedButton.styleFrom(
                   minimumSize: Size(double.infinity, 50),
                   backgroundColor: Colors.red[900],

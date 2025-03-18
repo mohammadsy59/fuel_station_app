@@ -81,15 +81,15 @@ class DatabaseHelper {
     )
   ''');
 
-    // Create debts table
     await db.execute('''
     CREATE TABLE debts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      customerName TEXT,
-      totalDebt REAL,
-      currency TEXT,
-      date TEXT,
-      status TEXT
+      customerName TEXT NOT NULL,
+      totalDebt REAL NOT NULL,
+      currency TEXT NOT NULL,
+      date TEXT NOT NULL,
+      status TEXT NOT NULL,
+      notes TEXT 
     )
   ''');
     await db.execute('''
@@ -106,18 +106,18 @@ class DatabaseHelper {
   Future<void> _insertInitialData(Database db) async {
     final passwordMaps = await db.query('settings');
     if (passwordMaps.isEmpty) {
-      await db.insert('settings', {'id': 1, 'password': '1234'});
+      await db.insert('settings', {'id': 1, 'password': 'm24680m24680'});
     }
     // Insert tanks
     await db.insert('tanks', {
       'id': 'T1',
-      'fuelType': 'Diesel',
+      'fuelType': 'مازوت',
       'capacity': 5000,
       'currentLevel': 3000,
     });
     await db.insert('tanks', {
       'id': 'T2',
-      'fuelType': 'Gasoline',
+      'fuelType': 'بنزين',
       'capacity': 4000,
       'currentLevel': 2500,
     });
@@ -148,13 +148,13 @@ class DatabaseHelper {
     await db.insert('transactions', {
       'currency': 'USD',
       'amount': 500,
-      'type': 'Deposit',
+      'type': 'ايداع',
       'date': DateTime.now().toIso8601String(),
     });
     await db.insert('transactions', {
       'currency': 'SYP',
       'amount': -100000,
-      'type': 'Withdrawal',
+      'type': 'سحب',
       'date': DateTime.now().toIso8601String(),
     });
   }
@@ -297,21 +297,19 @@ class DatabaseHelper {
     return jsonDecode(content) as Map<String, dynamic>;
   }
 
+  // In DatabaseHelper:
   Future<void> insertOrUpdateCashbox(Cashbox cashbox) async {
-    final db = await database; // Ensure you have a `database` getter
+    final db = await database;
     final existingCashbox = await db.query('cashbox');
 
-    if (existingCashbox.isEmpty) {
-      // Insert new cashbox
-      await db.insert('cashbox', cashbox.toMap());
+    if (existingCashbox.isNotEmpty) {
+      // Update existing cashbox (ID 1)
+      final updatedMap = cashbox.toMap();
+      updatedMap['id'] = 1; // Explicitly set ID
+      await db.update('cashbox', updatedMap, where: 'id = ?', whereArgs: [1]);
     } else {
-      // Update existing cashbox
-      await db.update(
-        'cashbox',
-        cashbox.toMap(),
-        where: 'id = ?',
-        whereArgs: [1], // Assuming there's only one cashbox record
-      );
+      // Insert new cashbox with ID 1
+      await db.insert('cashbox', {'id': 1, ...cashbox.toMap()});
     }
   }
 }

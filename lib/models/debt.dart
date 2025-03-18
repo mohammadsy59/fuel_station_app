@@ -5,6 +5,7 @@ class Debt {
   final String currency;
   final String date;
   final String status;
+  final String notes; // New field
 
   Debt({
     this.id,
@@ -13,6 +14,7 @@ class Debt {
     required this.currency,
     required this.date,
     required this.status,
+    this.notes = '', // Default to empty string
   });
 
   Map<String, dynamic> toMap() {
@@ -23,6 +25,7 @@ class Debt {
       'currency': currency,
       'date': date,
       'status': status,
+      'notes': notes, // Include notes in the map
     };
   }
 
@@ -34,6 +37,7 @@ class Debt {
       currency: map['currency'],
       date: map['date'],
       status: map['status'],
+      notes: map['notes'] ?? '', // Handle null values
     );
   }
 }

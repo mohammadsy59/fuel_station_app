@@ -36,16 +36,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         confirmPassword.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Please fill in all fields')));
+      ).showSnackBar(SnackBar(content: Text('الرجاء ملئ جميع الحقول')));
       return;
     }
 
     if (newPassword != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('New password and confirm password do not match'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('كلمة السر غير متطابقة')));
       return;
     }
 
@@ -53,7 +51,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final passwordMaps = await _dbHelper.queryAll('settings');
     if (passwordMaps.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No password set. Please contact the admin.')),
+        SnackBar(content: Text('لا يوجد كلمة سر الرجاء الاتصال بالمشرف .')),
       );
       return;
     }
@@ -63,7 +61,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (currentPassword != storedPassword) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Incorrect current password')));
+      ).showSnackBar(SnackBar(content: Text('كلمة السر الحالية غير صحيحة ')));
       return;
     }
 
@@ -76,7 +74,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     _confirmPasswordController.clear();
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('Password changed successfully')));
+    ).showSnackBar(SnackBar(content: Text('تم تغيير كلمة السر بنجاح')));
   }
 
   // Method to backup data
@@ -97,11 +95,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Backup completed successfully')));
+      ).showSnackBar(SnackBar(content: Text('تم حفظ نسخة احتياطية ')));
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to create backup: $e')));
+      ).showSnackBar(SnackBar(content: Text('فشل انشاء نسخة احتياطية: $e')));
     }
   }
 
@@ -117,12 +115,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Data restored successfully')));
+      ).showSnackBar(SnackBar(content: Text('تم استعادة البيانات بنجاح')));
     } catch (e) {
       print('Error during restore: $e'); // Log the error
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to restore data: $e')));
+      ).showSnackBar(SnackBar(content: Text('فشلت الاستعادة : $e')));
     }
   }
 
@@ -136,94 +134,97 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Security Settings'),
-        centerTitle: true,
-        backgroundColor: Colors.blue[900],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Change Password Section
-            Text(
-              'Change Password',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16),
-            TextFormField(
-              controller: _currentPasswordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Current Password',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock_outline),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('اعدادات الأمان'),
+          centerTitle: true,
+          backgroundColor: Colors.blue[900],
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Change Password Section
+              Text(
+                'تغيير كلمة السر ',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-            ),
-            SizedBox(height: 16),
-            TextFormField(
-              controller: _newPasswordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'New Password',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock_outline),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _currentPasswordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'كلمة السر الحالية ',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
               ),
-            ),
-            SizedBox(height: 16),
-            TextFormField(
-              controller: _confirmPasswordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Confirm New Password',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock_outline),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _newPasswordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'كلمة السر الجديدة',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
               ),
-            ),
-            SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => _changePassword(context),
-              icon: Icon(Icons.save),
-              label: Text('Save New Password'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, 50),
-                backgroundColor: Colors.blue[900],
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _confirmPasswordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'تأكيد كلمة السر الجديدة ',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
               ),
-            ),
+              SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => _changePassword(context),
+                icon: Icon(Icons.save),
+                label: Text('حفظ كلمة السر الجديدة'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: Size(double.infinity, 50),
+                  backgroundColor: Colors.blue[900],
+                ),
+              ),
 
-            // Backup and Restore Section
-            SizedBox(height: 24),
-            Text(
-              'Backup and Restore',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => _backupData(context),
-                  icon: Icon(Icons.backup),
-                  label: Text('Backup Data'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(150, 50),
-                    backgroundColor: Colors.green[700],
+              // Backup and Restore Section
+              SizedBox(height: 24),
+              Text(
+                'النسخ الاحتياطي والاستعادة ',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _backupData(context),
+                    icon: Icon(Icons.backup),
+                    label: Text('النسخ الاحتياطي'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: Size(150, 50),
+                      backgroundColor: Colors.green[700],
+                    ),
                   ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => _restoreData(context),
-                  icon: Icon(Icons.restore),
-                  label: Text('Restore Data'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(150, 50),
-                    backgroundColor: Colors.orange[700],
+                  ElevatedButton.icon(
+                    onPressed: () => _restoreData(context),
+                    icon: Icon(Icons.restore),
+                    label: Text('الإستعادة'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: Size(150, 50),
+                      backgroundColor: Colors.orange[700],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

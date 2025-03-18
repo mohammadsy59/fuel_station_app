@@ -357,16 +357,10 @@ class _DebtsScreenState extends State<DebtsScreen> {
             ),
           ],
         ),
-        floatingActionButton: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            FloatingActionButton(
-              onPressed: () => _showDebtTypeDialog(),
-              child: Icon(Icons.add),
-              backgroundColor: Colors.blue[700],
-            ),
-            SizedBox(height: 16),
-          ],
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showDebtTypeDialog(),
+          child: Icon(Icons.add),
+          backgroundColor: Colors.blue[700],
         ),
       ),
     );
@@ -436,8 +430,9 @@ class _DebtsScreenState extends State<DebtsScreen> {
 class DebtFormDialog extends StatefulWidget {
   final Debt? debt;
   final Cashbox? cashbox; // Pass cashbox for validation
+  final String debtType; // Add this to pass the debt type from FAB
 
-  DebtFormDialog({this.debt, required this.cashbox});
+  DebtFormDialog({this.debt, required this.cashbox, required this.debtType});
 
   @override
   _DebtFormDialogState createState() => _DebtFormDialogState();
@@ -450,7 +445,7 @@ class _DebtFormDialogState extends State<DebtFormDialog> {
   late TextEditingController _notesController;
   String _currency = 'USD';
   String _status = 'غير مدفوع';
-  String _debtType = 'دين بدون سجب من الصندوق'; // Default to Fuel Debt
+  String _debtType = 'دين بدون سحب من الصندوق'; // Default to Fuel Debt
 
   @override
   void initState() {
@@ -482,21 +477,7 @@ class _DebtFormDialogState extends State<DebtFormDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Debt Type Dropdown
-              DropdownButtonFormField<String>(
-                value: _debtType,
-                decoration: InputDecoration(labelText: 'نوع الدين'),
-                items:
-                    ['دين بدون سجب من الصندوق', 'دين مع سحب من الصندوق'].map((
-                      type,
-                    ) {
-                      return DropdownMenuItem<String>(
-                        value: type,
-                        child: Text(type),
-                      );
-                    }).toList(),
-                onChanged: (value) => setState(() => _debtType = value!),
-                validator: (value) => value == null ? 'نوع الدين مطلوب ' : null,
-              ),
+
               // Customer Name
               TextFormField(
                 controller: _customerNameController,

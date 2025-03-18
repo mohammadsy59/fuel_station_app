@@ -56,66 +56,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.settings),
-            onPressed:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) =>
-                            ChangePasswordScreen(reloadData: _loadData),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          actions: [
+            IconButton(
+              icon: Icon(Icons.settings),
+              onPressed:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) =>
+                              ChangePasswordScreen(reloadData: _loadData),
+                    ),
                   ),
-                ),
-          ),
-        ],
-        title: Text('Fuel Station Dashboard'),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.blue,
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await _loadData();
-        },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('Overview'),
-              _buildOverviewSection(),
-              SizedBox(height: 20),
-              _buildSectionTitle('Fuel Tanks'),
-              ..._tanks.map((tank) => _buildTankCard(tank)),
-              SizedBox(height: 20),
-              _buildSectionTitle('Pumps'),
-              ..._pumps.map((pump) => _buildPumpCard(pump)),
-              SizedBox(height: 20),
-              _buildSectionTitle('Actions'),
+            ),
+          ],
+          title: Text('محطة شان للمحروقات'),
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.blue,
+        ),
+        body: RefreshIndicator(
+          onRefresh: () async {
+            await _loadData();
+          },
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionTitle('نظرة عامة'),
+                _buildOverviewSection(),
+                SizedBox(height: 20),
+                _buildSectionTitle('خزانات الوقود'),
+                ..._tanks.map((tank) => _buildTankCard(tank)),
+                SizedBox(height: 20),
+                _buildSectionTitle('المضخات'),
+                ..._pumps.map((pump) => _buildPumpCard(pump)),
+                SizedBox(height: 20),
+                _buildSectionTitle('خيارات'),
 
-              SizedBox(height: 20),
-              Container(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => LockScreen()),
-                    );
-                  },
-                  icon: Icon(Icons.lock),
-                  label: Text('Lock App'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(double.infinity, 50),
-                    backgroundColor: Colors.blue[500],
+                SizedBox(height: 20),
+                Container(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => LockScreen()),
+                      );
+                    },
+                    icon: Icon(Icons.lock),
+                    label: Text('قفل التطبيق'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: Size(double.infinity, 50),
+                      backgroundColor: Colors.blue[500],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -160,7 +163,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: 3,
-        separatorBuilder: (context, index) => SizedBox(width: 16),
+        separatorBuilder: (context, index) => SizedBox(width: 66),
         itemBuilder: (context, index) {
           if (index == 0) {
             return _buildMetricCard(
@@ -187,47 +190,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildMetricCard(String title, String value, Color color) {
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      width: 150,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: LinearGradient(
-          colors: [color.withOpacity(0.1), color.withOpacity(0.3)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+    return Flex(
+      mainAxisSize: MainAxisSize.min,
+      direction: Axis.horizontal,
+      children: [
+        Flexible(
+          child: AnimatedContainer(
+            width: MediaQuery.of(context).size.width / 3.5,
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [color.withOpacity(0.1), color.withOpacity(0.3)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Center(
+                    child: Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -241,15 +260,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${tank.fuelType} Tank (${tank.id})',
+              '${tank.fuelType} الخزان (${tank.id})',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Capacity: ${tank.capacity}L'),
-                Text('Current: ${tank.currentLevel}L'),
+                Text('السعة: ${tank.capacity}L'),
+                Text('الكمية الحالية: ${tank.currentLevel}L'),
               ],
             ),
             SizedBox(height: 8),
@@ -262,7 +281,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: Text(
-                '${tank.percentageFilled.toStringAsFixed(1)}% Filled',
+                '${tank.percentageFilled.toStringAsFixed(1)}% ممتلئ',
                 style: TextStyle(fontSize: 14, color: Colors.black87),
               ),
             ),
@@ -282,17 +301,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Pump ${pump.id}',
+              'المضخة ${pump.id}',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
-            Text('Connected to Tank: ${pump.connectedTankId}'),
+            Text('متصلة بالخزان: ${pump.connectedTankId}'),
             SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Digital Counter: ${pump.digitalCounter}L'),
-                Text('Mechanical Counter: ${pump.mechanicalCounter}L'),
+                Text('العداد الرقمي: ${pump.digitalCounter}L'),
+                Text('العداد الآلي: ${pump.mechanicalCounter}L'),
               ],
             ),
           ],

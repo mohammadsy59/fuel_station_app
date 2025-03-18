@@ -49,13 +49,13 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       final currency = result['currency'];
       final customerName = result['customerName'];
 
-      if (paymentStatus == 'Paid') {
+      if (paymentStatus == 'مدفوع') {
         // Add the total amount to the cashbox
-        print('Adding $totalAmount $currency to cashbox for Paid invoice');
+        print('Adding $totalAmount $currency to cashbox for مدفوع invoice');
         await _updateCashbox(totalAmount, currency);
-      } else if (paymentStatus == 'Unpaid') {
+      } else if (paymentStatus == 'غير مدفوع') {
         // Record the unpaid amount as a debt
-        print('Recording $totalAmount $currency as debt for Unpaid invoice');
+        print('Recording $totalAmount $currency as debt for غير مدفوع invoice');
         await _addDebt(customerName, totalAmount, currency);
       }
 
@@ -73,7 +73,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       'totalDebt': totalAmount,
       'currency': currency,
       'date': DateTime.now().toIso8601String(),
-      'status': 'Outstanding',
+      'status': 'غير مدفوع',
     };
 
     await DatabaseHelper.instance.insert('debts', debtData);
@@ -120,8 +120,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       'paymentStatus': status,
     });
 
-    // If the status is changed to "Paid", transfer the debt to the cashbox
-    if (status == 'Paid') {
+    // If the status is changed to "مدفوع", transfer the debt to the cashbox
+    if (status == 'مدفوع') {
       final invoiceMaps = await DatabaseHelper.instance.query(
         'invoices',
         where: 'id = ?',
@@ -131,14 +131,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         final invoice = Invoice.fromMap(invoiceMaps.first);
 
         // Check if the invoice was previously unpaid
-        if (invoice.paymentStatus == 'Unpaid') {
+        if (invoice.paymentStatus == 'غير مدفوع') {
           // Add the total amount to the cashbox
           print(
-            'Transferring $invoice.totalAmount $invoice.currency to cashbox for Paid invoice',
+            'Transferring $invoice.totalAmount $invoice.currency to cashbox for مدفوع invoice',
           );
           await _updateCashbox(invoice.totalAmount, invoice.currency);
 
-          // Update the debt status to "Paid"
+          // Update the debt status to "مدفوع"
           final debts = await DatabaseHelper.instance.query(
             'debts',
             where:
@@ -147,14 +147,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               invoice.customerName,
               invoice.totalAmount,
               invoice.currency,
-              'Outstanding',
+              'غير مدفوع',
             ],
           );
           if (debts.isNotEmpty) {
             final debtId = debts.first['id'];
             await DatabaseHelper.instance.update('debts', {
               'id': debtId,
-              'status': 'Paid',
+              'status': 'مدفوع',
             });
           }
         }
@@ -166,26 +166,29 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Invoices'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: () => _addOrUpdateInvoice(),
-          ),
-        ],
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('الفواتير'),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.add),
+              onPressed: () => _addOrUpdateInvoice(),
+            ),
+          ],
+        ),
+        body:
+            _invoices.isEmpty
+                ? Center(child: Text('لا يوجد فواتير !'))
+                : ListView.builder(
+                  itemCount: _invoices.length,
+                  itemBuilder: (context, index) {
+                    final invoice = _invoices[index];
+                    return _buildInvoiceCard(invoice);
+                  },
+                ),
       ),
-      body:
-          _invoices.isEmpty
-              ? Center(child: Text('No invoices available.'))
-              : ListView.builder(
-                itemCount: _invoices.length,
-                itemBuilder: (context, index) {
-                  final invoice = _invoices[index];
-                  return _buildInvoiceCard(invoice);
-                },
-              ),
     );
   }
 
@@ -202,7 +205,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Invoice #${invoice.id}',
+                  'الفاتورة رقم #${invoice.id}',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Row(
@@ -220,12 +223,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               ],
             ),
             SizedBox(height: 8),
-            Text('Customer: ${invoice.customerName}'),
-            Text('Fuel Type: ${invoice.fuelType}'),
-            Text('Quantity: ${invoice.quantity}L'),
-            Text('Price Per Unit: ${invoice.pricePerUnit}'),
-            Text('Total Amount: ${invoice.totalAmount} ${invoice.currency}'),
-            Text('Date: ${invoice.date}'),
+            Text('الزبون: ${invoice.customerName}'),
+            Text('نوع الوقود: ${invoice.fuelType}'),
+            Text('الكميّة: ${invoice.quantity}L'),
+            Text('سعر اللتر: ${invoice.pricePerUnit}'),
+            Text(
+              ' المبلغ الإجمالي: ${invoice.totalAmount} ${invoice.currency}',
+            ),
+            Text('التاريخ: ${invoice.date}'),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [Text('Status: ${invoice.paymentStatus}')],
@@ -270,7 +275,7 @@ class _InvoiceFormDialogState extends State<InvoiceFormDialog> {
       text: widget.invoice?.pricePerUnit.toString() ?? '',
     );
     _currency = widget.invoice?.currency ?? 'USD';
-    _paymentStatus = widget.invoice?.paymentStatus ?? 'Unpaid';
+    _paymentStatus = widget.invoice?.paymentStatus ?? 'غير مدفوع';
   }
 
   @override
@@ -284,7 +289,7 @@ class _InvoiceFormDialogState extends State<InvoiceFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.invoice == null ? 'Add Invoice' : 'Edit Invoice'),
+      title: Text(widget.invoice == null ? 'إضافة فاتورة' : 'تعديل فاتورة'),
       content: Form(
         key: _formKey,
         child: Column(
@@ -292,14 +297,12 @@ class _InvoiceFormDialogState extends State<InvoiceFormDialog> {
           children: [
             TextFormField(
               controller: _customerNameController,
-              decoration: InputDecoration(labelText: 'Customer Name'),
-              validator:
-                  (value) =>
-                      value!.isEmpty ? 'Customer name is required' : null,
+              decoration: InputDecoration(labelText: 'إسم الزبون'),
+              validator: (value) => value!.isEmpty ? 'إسم الزبون مطلوب' : null,
             ),
             DropdownButtonFormField<String>(
               value: _selectedTankId,
-              decoration: InputDecoration(labelText: 'Fuel Tank'),
+              decoration: InputDecoration(labelText: 'خزان الوقود'),
               items:
                   widget.tanks.map((tank) {
                     return DropdownMenuItem<String>(
@@ -314,27 +317,23 @@ class _InvoiceFormDialogState extends State<InvoiceFormDialog> {
                   _selectedTankId = value!;
                 });
               },
-              validator:
-                  (value) => value == null ? 'Fuel tank is required' : null,
+              validator: (value) => value == null ? 'خزان الوقود مطلوب' : null,
             ),
             TextFormField(
               controller: _quantityController,
-              decoration: InputDecoration(labelText: 'Quantity (L)'),
+              decoration: InputDecoration(labelText: 'الكمية باللتر'),
               keyboardType: TextInputType.number,
-              validator:
-                  (value) => value!.isEmpty ? 'Quantity is required' : null,
+              validator: (value) => value!.isEmpty ? 'الكميّة مطلوبة' : null,
             ),
             TextFormField(
               controller: _pricePerUnitController,
-              decoration: InputDecoration(labelText: 'Price Per Unit'),
+              decoration: InputDecoration(labelText: 'سعر اللتر'),
               keyboardType: TextInputType.number,
-              validator:
-                  (value) =>
-                      value!.isEmpty ? 'Price per unit is required' : null,
+              validator: (value) => value!.isEmpty ? 'سعر اللتر مطلوب ' : null,
             ),
             DropdownButtonFormField<String>(
               value: _currency,
-              decoration: InputDecoration(labelText: 'Currency'),
+              decoration: InputDecoration(labelText: 'العملة'),
               items:
                   ['USD', 'SYP', 'TRY'].map((currency) {
                     return DropdownMenuItem<String>(
@@ -347,14 +346,13 @@ class _InvoiceFormDialogState extends State<InvoiceFormDialog> {
                   _currency = value!;
                 });
               },
-              validator:
-                  (value) => value == null ? 'Currency is required' : null,
+              validator: (value) => value == null ? 'العملة مطلوبة' : null,
             ),
             DropdownButtonFormField<String>(
               value: _paymentStatus,
-              decoration: InputDecoration(labelText: 'Payment Status'),
+              decoration: InputDecoration(labelText: 'حالة الدفع'),
               items:
-                  ['Unpaid', 'Paid'].map((status) {
+                  ['غير مدفوع', 'مدفوع'].map((status) {
                     return DropdownMenuItem<String>(
                       value: status,
                       child: Text(status),
@@ -365,9 +363,7 @@ class _InvoiceFormDialogState extends State<InvoiceFormDialog> {
                   _paymentStatus = value!;
                 });
               },
-              validator:
-                  (value) =>
-                      value == null ? 'Payment status is required' : null,
+              validator: (value) => value == null ? 'حالة الدفع مطلوبة' : null,
             ),
           ],
         ),
@@ -375,7 +371,7 @@ class _InvoiceFormDialogState extends State<InvoiceFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel'),
+          child: Text('إلغاء '),
         ),
         ElevatedButton(
           onPressed: () async {
@@ -388,9 +384,7 @@ class _InvoiceFormDialogState extends State<InvoiceFormDialog> {
               // Check if the tank has sufficient fuel
               if (quantity > selectedTank['currentLevel']) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Insufficient fuel in the selected tank'),
-                  ),
+                  SnackBar(content: Text('لا يوجد وقود كافي في الخزان ')),
                 );
                 return;
               }
@@ -424,23 +418,21 @@ class _InvoiceFormDialogState extends State<InvoiceFormDialog> {
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('No pump connected to the selected tank'),
-                  ),
+                  SnackBar(content: Text('لا يوجد مضحة متصلة بالخزان ')),
                 );
               }
 
               // Handle payment status
-              if (_paymentStatus == 'Paid') {
+              if (_paymentStatus == 'مدفوع') {
                 // Add the total amount to the cashbox
                 print(
-                  'Adding $totalAmount $_currency to cashbox for Paid invoice',
+                  'إضافة  $totalAmount $_currency إلى الصندوق كفاتورة مدفوعة ',
                 );
                 await _updateCashbox(totalAmount, _currency);
-              } else if (_paymentStatus == 'Unpaid') {
+              } else if (_paymentStatus == 'غير مدفوع') {
                 // Record the unpaid amount as a debt
                 print(
-                  'Recording $totalAmount $_currency as debt for Unpaid invoice',
+                  'Recording $totalAmount $_currency as debt for غير مدفوع invoice',
                 );
                 await _addDebt(
                   _customerNameController.text,
@@ -452,7 +444,7 @@ class _InvoiceFormDialogState extends State<InvoiceFormDialog> {
               Navigator.pop(context, invoiceData);
             }
           },
-          child: Text(widget.invoice == null ? 'Add' : 'Save'),
+          child: Text(widget.invoice == null ? 'إضافة ' : 'حفظ'),
         ),
       ],
     );
@@ -516,7 +508,7 @@ class _InvoiceFormDialogState extends State<InvoiceFormDialog> {
       'totalDebt': totalAmount,
       'currency': currency,
       'date': DateTime.now().toIso8601String(),
-      'status': 'Outstanding',
+      'status': 'غير مدفوع',
     };
   }
 }

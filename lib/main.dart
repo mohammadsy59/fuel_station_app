@@ -26,10 +26,14 @@ void main() async {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Fuel Station Management',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: LockScreen(),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'إدارة محطة الوقود',
+        theme: ThemeData(primarySwatch: Colors.blue),
+        home: LockScreen(),
+      ),
     );
   }
 }
@@ -54,37 +58,49 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_gas_station),
-            label: 'Tanks',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.ev_station), label: 'Pumps'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.attach_money),
-            label: 'Cashbox',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt), label: 'Invoices'),
-          BottomNavigationBarItem(icon: Icon(Icons.money_off), label: 'Debts'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.currency_exchange),
-            label: 'Exchange',
-          ),
-        ],
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        body: _screens[_currentIndex],
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          type: BottomNavigationBarType.fixed,
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard),
+              label: 'الشاشة الرئيسية ',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.local_gas_station),
+              label: 'الخزانات ',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.ev_station),
+              label: 'المضخات',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.attach_money),
+              label: 'الصندوق',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.receipt),
+              label: 'الفواتير',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.money_off),
+              label: 'الديون',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.currency_exchange),
+              label: 'الصرافة',
+            ),
+          ],
+        ),
       ),
     );
   }

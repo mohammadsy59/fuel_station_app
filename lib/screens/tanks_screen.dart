@@ -42,7 +42,7 @@ class _TanksScreenState extends State<TanksScreen> {
           if (existingTank.isNotEmpty) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(SnackBar(content: Text('Tank ID already exists!')));
+            ).showSnackBar(SnackBar(content: Text('رقم الخزان موجود سابقاً!')));
             return;
           }
           await _dbHelper.insert('tanks', result);
@@ -53,14 +53,14 @@ class _TanksScreenState extends State<TanksScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Tank ${tank == null ? 'added' : 'updated'} successfully',
+              'الخزان  ${tank == null ? 'تم اللإضافة' : 'تم التعديل'} بنجاح',
             ),
           ),
         );
       } catch (e) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        ).showSnackBar(SnackBar(content: Text('خطأ: ${e.toString()}')));
       }
     }
   }
@@ -71,18 +71,18 @@ class _TanksScreenState extends State<TanksScreen> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: Text('Confirm Delete'),
+            title: Text('تأكيد الحذف'),
             content: Text(
-              'Are you sure you want to delete this tank? This action cannot be undone.',
+              'هل بالتأكيد نريد حذف الخزان! لا يمكن التراجع عن هذا الإجراء؟',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false), // Cancel
-                child: Text('Cancel'),
+                child: Text('إلغاء '),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context, true), // Confirm
-                child: Text('Delete'),
+                child: Text('حذف'),
               ),
             ],
           ),
@@ -98,36 +98,39 @@ class _TanksScreenState extends State<TanksScreen> {
       _loadTanks(); // Refresh the list
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Tank deleted successfully')));
+      ).showSnackBar(SnackBar(content: Text('تم حذف الخزان بنجاح')));
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to delete tank: $e')));
+      ).showSnackBar(SnackBar(content: Text('فشل حذف الخزان : $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Fuel Tanks'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: () => _addOrUpdateTank(),
-          ),
-        ],
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('خزانات الوقود'),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.add),
+              onPressed: () => _addOrUpdateTank(),
+            ),
+          ],
+        ),
+        body:
+            _tanks.isEmpty
+                ? Center(child: Text('لا يوجد خزانات !'))
+                : ListView.builder(
+                  itemCount: _tanks.length,
+                  itemBuilder: (context, index) {
+                    final tank = _tanks[index];
+                    return _buildTankCard(tank);
+                  },
+                ),
       ),
-      body:
-          _tanks.isEmpty
-              ? Center(child: Text('No tanks available.'))
-              : ListView.builder(
-                itemCount: _tanks.length,
-                itemBuilder: (context, index) {
-                  final tank = _tanks[index];
-                  return _buildTankCard(tank);
-                },
-              ),
     );
   }
 
@@ -144,7 +147,7 @@ class _TanksScreenState extends State<TanksScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${tank.fuelType} Tank (${tank.id})',
+                  '${tank.fuelType} الخزان (${tank.id})',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Row(
@@ -162,8 +165,8 @@ class _TanksScreenState extends State<TanksScreen> {
               ],
             ),
             SizedBox(height: 8),
-            Text('Capacity: ${tank.capacity}L'),
-            Text('Current Level: ${tank.currentLevel}L'),
+            Text('السعة : ${tank.capacity}L'),
+            Text('الكمية الموجودة: ${tank.currentLevel}L'),
             SizedBox(height: 8),
             LinearProgressIndicator(
               value: tank.percentageFilled / 100,
@@ -174,7 +177,7 @@ class _TanksScreenState extends State<TanksScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: Text(
-                '${tank.percentageFilled.toStringAsFixed(1)}% Filled',
+                '${tank.percentageFilled.toStringAsFixed(1)}% ممتلئ',
                 style: TextStyle(fontSize: 14, color: Colors.black87),
               ),
             ),
@@ -260,7 +263,7 @@ class _TankFormDialogState extends State<TankFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.tank == null ? 'Add Tank' : 'Edit Tank'),
+      title: Text(widget.tank == null ? 'إضافة خزان' : 'تعديل خزان'),
       content: Form(
         key: _formKey,
         child: Column(
@@ -268,11 +271,11 @@ class _TankFormDialogState extends State<TankFormDialog> {
           children: [
             TextFormField(
               controller: _idController,
-              decoration: InputDecoration(labelText: 'Tank ID'),
-              enabled: !_isEditMode, // Disable ID field in edit mode
+              decoration: InputDecoration(labelText: 'رقم الخزان'),
+              enabled: false, // Disable ID field in edit mode
               validator: (value) {
                 if (_isEditMode && value!.isEmpty) {
-                  return 'ID is required';
+                  return 'رقم الخزان مطلوب ';
                 }
                 if (!RegExp(r'^T\d+$').hasMatch(value!)) {
                   return 'ID must start with "T" followed by a number (e.g., T1, T2)';
@@ -282,31 +285,29 @@ class _TankFormDialogState extends State<TankFormDialog> {
             ),
             TextFormField(
               controller: _fuelTypeController,
-              decoration: InputDecoration(labelText: 'Fuel Type'),
-              validator:
-                  (value) => value!.isEmpty ? 'Fuel type is required' : null,
+              decoration: InputDecoration(labelText: 'نوع الوقود '),
+              validator: (value) => value!.isEmpty ? 'نوع الوقود مطلوب ' : null,
             ),
             TextFormField(
               controller: _capacityController,
-              decoration: InputDecoration(labelText: 'Capacity (L)'),
+              decoration: InputDecoration(labelText: 'السعة باللتر  (L)'),
               keyboardType: TextInputType.number,
-              validator:
-                  (value) => value!.isEmpty ? 'Capacity is required' : null,
+              validator: (value) => value!.isEmpty ? 'السعة مطلوبة' : null,
             ),
             TextFormField(
               controller: _currentLevelController,
-              decoration: InputDecoration(labelText: 'Current Level (L)'),
+              decoration: InputDecoration(labelText: 'الكمية الموجودة  (L)'),
               keyboardType: TextInputType.number,
               validator: (value) {
                 if (value!.isEmpty) {
-                  return 'Current level is required';
+                  return 'الكمية االموجودة مطلوبة ';
                 }
                 final currentLevel = double.tryParse(value);
                 final capacity = double.tryParse(_capacityController.text);
                 if (currentLevel != null &&
                     capacity != null &&
                     currentLevel > capacity) {
-                  return 'Current level cannot exceed capacity';
+                  return 'الكمية الحالية أكبر من سعة الخزان';
                 }
                 return null;
               },
@@ -317,7 +318,7 @@ class _TankFormDialogState extends State<TankFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel'),
+          child: Text('إلغاء'),
         ),
         ElevatedButton(
           onPressed: () async {
@@ -338,7 +339,7 @@ class _TankFormDialogState extends State<TankFormDialog> {
                 );
                 if (existingTank.isNotEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Tank ID already exists!')),
+                    SnackBar(content: Text('رقم الخزان موجود سابقاً')),
                   );
                   return;
                 }
@@ -347,7 +348,7 @@ class _TankFormDialogState extends State<TankFormDialog> {
               Navigator.pop(context, tankData);
             }
           },
-          child: Text(widget.tank == null ? 'Add' : 'Save'),
+          child: Text(widget.tank == null ? 'إضافة ' : 'حفظ'),
         ),
       ],
     );
